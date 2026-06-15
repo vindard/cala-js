@@ -5,7 +5,7 @@
 
 import test from 'ava'
 
-import { CalaLedger } from '../index.js'
+import { CalaLedger, ParamDataTypeValues } from '../index.js'
 
 const PG_CON = process.env.PG_CON
 const dbTest = PG_CON ? test : test.skip
@@ -46,4 +46,63 @@ dbTest('lists accounts with pagination shape', async (t) => {
   if (result.endCursor != null) {
     t.is(typeof result.endCursor.token, 'string')
   }
+})
+
+dbTest('posts a transaction whose template uses a CEL default param', async (t) => {
+  // Regression: NewParamDefinition.default was silently dropped by the
+  // binding, so any template that relied on a CEL default for required
+  // fields (e.g. `effective: 'date()'`) would fail to post with
+  // "Could not coerce Null into Date".
+  const journal = await ledger.journals().create({ name: `tx-${Date.now()}` })
+  const accounts = ledger.accounts()
+  const sender = await accounts.create({
+    code: `S-${Date.now()}-${Math.random()}`,
+    name: 'sender',
+  })
+  const recipient = await accounts.create({
+    code: `R-${Date.now()}-${Math.random()}`,
+    name: 'recipient',
+  })
+
+  const code = `T_${Date.now()}_${Math.floor(Math.random() * 1e6)}`
+  await ledger.txTemplates().create({
+    code,
+    params: [
+      { name: 'sender', type: ParamDataTypeValues.Uuid },
+      { name: 'recipient', type: ParamDataTypeValues.Uuid },
+      { name: 'journal_id', type: ParamDataTypeValues.Uuid },
+      { name: 'effective', type: ParamDataTypeValues.Date, default: 'date()' },
+    ],
+    transaction: {
+      effective: 'params.effective',
+      journalId: 'params.journal_id',
+    },
+    entries: [
+      {
+        entryType: "'DR'",
+        accountId: 'params.sender',
+        layer: "'SETTLED'",
+        direction: "'DEBIT'",
+        units: "decimal('1')",
+        currency: "'USD'",
+      },
+      {
+        entryType: "'CR'",
+        accountId: 'params.recipient',
+        layer: "'SETTLED'",
+        direction: "'CREDIT'",
+        units: "decimal('1')",
+        currency: "'USD'",
+      },
+    ],
+  })
+
+  const tx = await ledger.transactions().post(code, {
+    sender: sender.id(),
+    recipient: recipient.id(),
+    journal_id: journal.id(),
+  })
+
+  t.is(tx.values().journalId, journal.id())
+  t.is(tx.values().entryIds.length, 2)
 })
