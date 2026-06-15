@@ -1,0 +1,19 @@
+version: "0.5"
+
+log_location: .dev/process-compose.log
+
+processes:
+  postgres:
+    command: ./scripts/start-pg.sh
+    readiness_probe:
+      exec:
+        command: psql -h ${PG_HOST} -p ${PG_PORT} -U ${PG_USER} -d ${PG_DB} -c "SELECT 1"
+      initial_delay_seconds: 2
+      period_seconds: 1
+      failure_threshold: 60
+    shutdown:
+      signal: 2
+      timeout_seconds: 10
+    availability:
+      restart: on_failure
+      backoff_seconds: 2
