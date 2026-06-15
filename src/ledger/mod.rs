@@ -32,8 +32,7 @@ impl Task for ConnectTask {
       builder.max_connections(n);
     }
     let config = builder.build().map_err(crate::generic_napi_error)?;
-    napi::tokio::runtime::Handle::current()
-      .block_on(cala_ledger::CalaLedger::init(config))
+    napi::bindgen_prelude::block_on(cala_ledger::CalaLedger::init(config))
       .map_err(crate::generic_napi_error)
   }
 
