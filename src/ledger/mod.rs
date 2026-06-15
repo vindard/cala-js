@@ -2,6 +2,9 @@ mod config;
 
 pub use config::*;
 
+use napi::bindgen_prelude::AsyncTask;
+use napi::{Env, Task};
+
 use crate::{transaction::CalaTransactions, tx_template::CalaTxTemplates};
 
 use super::{account::*, journal::*};
@@ -11,21 +14,39 @@ pub struct CalaLedger {
   inner: cala_ledger::CalaLedger,
 }
 
-#[napi]
-impl CalaLedger {
-  #[napi(factory)]
-  pub async fn connect(config: CalaLedgerConfig) -> napi::Result<Self> {
+pub struct ConnectTask {
+  config: CalaLedgerConfig,
+}
+
+impl Task for ConnectTask {
+  type Output = cala_ledger::CalaLedger;
+  type JsValue = CalaLedger;
+
+  fn compute(&mut self) -> napi::Result<Self::Output> {
     use cala_ledger::CalaLedgerConfig as Config;
     let mut builder = Config::builder();
-    builder.pg_con(config.pg_con).exec_migrations(true);
-    if let Some(n) = config.max_connections {
+    builder
+      .pg_con(self.config.pg_con.clone())
+      .exec_migrations(true);
+    if let Some(n) = self.config.max_connections {
       builder.max_connections(n);
     }
     let config = builder.build().map_err(crate::generic_napi_error)?;
-    let inner = cala_ledger::CalaLedger::init(config)
-      .await
-      .map_err(crate::generic_napi_error)?;
-    Ok(Self { inner })
+    napi::tokio::runtime::Handle::current()
+      .block_on(cala_ledger::CalaLedger::init(config))
+      .map_err(crate::generic_napi_error)
+  }
+
+  fn resolve(&mut self, _env: Env, output: Self::Output) -> napi::Result<Self::JsValue> {
+    Ok(CalaLedger { inner: output })
+  }
+}
+
+#[napi]
+impl CalaLedger {
+  #[napi(ts_return_type = "Promise<CalaLedger>")]
+  pub fn connect(config: CalaLedgerConfig) -> AsyncTask<ConnectTask> {
+    AsyncTask::new(ConnectTask { config })
   }
 
   #[napi]
