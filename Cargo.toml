@@ -1,0 +1,25 @@
+[package]
+edition = "2021"
+name = "cala-ledger-node"
+version = "0.15.11"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+cala-ledger = "0.15.11"
+cala-types = { version = "0.15.11", package = "cala-ledger-core-types" }
+cel-interpreter = { version = "0.15.11", package = "cala-cel-interpreter" }
+
+base64 = "0.22"
+chrono = "0.4"
+uuid = { version = "1", features = ["serde", "v7"] }
+rust_decimal = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+napi = { version = "3.4.0", default-features = false, features = ["tokio_rt", "serde-json"] }
+napi-derive = "3.2.5"
+
+[build-dependencies]
+napi-build = "2.2.4"
