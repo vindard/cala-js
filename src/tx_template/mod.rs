@@ -73,6 +73,12 @@ impl CalaTxTemplates {
         };
         let mut param_builder = NewParamDefinition::builder();
         param_builder.name(param.name).r#type(param_type);
+        if let Some(default) = param.default {
+          param_builder.default_expr(default);
+        }
+        if let Some(description) = param.description {
+          param_builder.description(description);
+        }
 
         tx_template_params.push(param_builder.build().map_err(crate::generic_napi_error)?);
       }
