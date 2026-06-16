@@ -5,7 +5,10 @@ pub use config::*;
 use napi::bindgen_prelude::AsyncTask;
 use napi::{Env, Task};
 
-use crate::{transaction::CalaTransactions, tx_template::CalaTxTemplates};
+use crate::{
+  balance::CalaBalances, entry::CalaEntries, transaction::CalaTransactions,
+  tx_template::CalaTxTemplates,
+};
 
 use super::{account::*, journal::*};
 
@@ -69,5 +72,15 @@ impl CalaLedger {
       self.inner.transactions(),
       &self.inner,
     ))
+  }
+
+  #[napi]
+  pub fn entries(&self) -> napi::Result<CalaEntries> {
+    Ok(CalaEntries::new(self.inner.entries()))
+  }
+
+  #[napi]
+  pub fn balances(&self) -> napi::Result<CalaBalances> {
+    Ok(CalaBalances::new(self.inner.balances()))
   }
 }
