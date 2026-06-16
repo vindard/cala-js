@@ -19,8 +19,8 @@ dev-attach:
 dev-down:
     process-compose down
 
-# Wipe the local postgres data dir. Stops PC first if running.
-dev-reset:
+# Stop process-compose (if running) and wipe the local postgres data dir.
+dev-clean:
     -process-compose down
     rm -rf .dev/pg
 
