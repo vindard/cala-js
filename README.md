@@ -6,33 +6,29 @@ This is a [napi-rs](https://napi.rs/) wrapper around the published `cala-ledger`
 
 ## Consuming from another project
 
-You build the native addon here, then link it from the consumer repo. Two options:
+Not published to npm — install directly from this repo. Two options:
 
-### 1. file: dependency (recommended for sibling checkouts)
+### 1. GitHub URL (recommended)
 
 In the consumer's `package.json`:
 
 ```json
 "dependencies": {
-  "@vindard/cala-ledger": "file:../cala-js"
+  "@vindard/cala-ledger": "github:vindard/cala-js"
 }
 ```
 
-Then, from this repo:
+Pin to a commit or tag for reproducibility:
 
-```bash
-just build           # produces the .node binary + index.js + index.d.ts
+```json
+"@vindard/cala-ledger": "github:vindard/cala-js#<sha-or-tag>"
 ```
 
-From the consumer repo:
+Then `yarn install` in the consumer. Yarn checks out the ref, installs the wrapper's devDeps, and runs the `prepare` script — `napi build --platform --release` — which compiles the native addon on the consumer's machine.
 
-```bash
-yarn install
-```
+The consumer therefore needs a working Rust toolchain (rustc, cargo) on `PATH` at install time. The resulting `.node` is built for the consumer's own triple, so cross-machine OS/arch mismatches are no longer an issue.
 
-Yarn copies the built artifact into `node_modules/@vindard/cala-ledger`. Re-run `just build` followed by `yarn install --force` in the consumer when you change the wrapper.
-
-### 2. yarn link / npm link (symlink, survives rebuilds)
+### 2. yarn link / npm link (for active development against a sibling checkout)
 
 ```bash
 # in this repo
@@ -43,9 +39,7 @@ yarn link
 yarn link @vindard/cala-ledger
 ```
 
-Subsequent `just build` runs in this repo are picked up by the consumer without re-linking.
-
-Either way, the consumer needs to be on the same triple (OS + arch + libc) as where you built the `.node`. For typical dev on one laptop that's a non-issue.
+Subsequent `just build` runs in this repo are picked up by the consumer without re-linking. The consumer must be on the same triple (OS + arch + libc) as where you built the `.node`.
 
 ## Usage
 
