@@ -10,6 +10,8 @@ use serde_json::Value as JsonValue;
 use std::collections::HashMap;
 use values::*;
 
+use crate::query::*;
+
 #[napi]
 pub struct CalaTransaction {
   inner: cala_ledger::transaction::Transaction,
@@ -26,6 +28,13 @@ impl CalaTransaction {
   pub fn values(&self) -> TransactionValues {
     TransactionValues::from(&self.inner)
   }
+}
+
+#[napi(object)]
+pub struct PaginatedTransactions {
+  pub transactions: Vec<TransactionValues>,
+  pub has_next_page: bool,
+  pub end_cursor: Option<CursorToken>,
 }
 
 #[napi]
@@ -89,6 +98,48 @@ impl CalaTransactions {
       .map_err(crate::generic_napi_error)?;
 
     Ok(CalaTransaction { inner: transaction })
+  }
+
+  /// List transactions posted through a tx-template, paginated. Returns
+  /// most-recent-first (descending by created_at). The frontend reverses
+  /// for display order. Cursor token is the standard PaginatedQueryArgs
+  /// cursor shape — opaque to JS.
+  #[napi]
+  pub async fn list_for_template_code(
+    &self,
+    tx_template_code: String,
+    query: PaginatedQueryArgs,
+  ) -> napi::Result<PaginatedTransactions> {
+    let tx_template = self
+      .ledger
+      .tx_templates()
+      .find_by_code(tx_template_code)
+      .await
+      .map_err(crate::generic_napi_error)?;
+    let template_id = tx_template.id();
+
+    let query = cala_ledger::es_entity::PaginatedQueryArgs {
+      after: query.after.map(|c| c.try_into()).transpose()?,
+      first: usize::try_from(query.first).map_err(crate::generic_napi_error)?,
+    };
+    let ret = self
+      .inner
+      .list_for_template_id(
+        template_id,
+        query,
+        cala_ledger::es_entity::ListDirection::Descending,
+      )
+      .await
+      .map_err(crate::generic_napi_error)?;
+    Ok(PaginatedTransactions {
+      transactions: ret
+        .entities
+        .iter()
+        .map(TransactionValues::from)
+        .collect(),
+      has_next_page: ret.has_next_page,
+      end_cursor: ret.end_cursor.map(|c| c.into()),
+    })
   }
 
   #[napi]
