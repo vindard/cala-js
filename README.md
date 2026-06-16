@@ -6,7 +6,12 @@ This is a [napi-rs](https://napi.rs/) wrapper around the published `cala-ledger`
 
 ## Consuming from another project
 
-Not published to npm — install directly from this repo. Two options:
+Not published to npm — install directly from this repo.
+
+> [!IMPORTANT]
+> **Consumers must have a working Rust toolchain (`rustc`, `cargo`) on `PATH` at install time.** Installing this package runs `napi build --release` on the consumer's machine, which cargo-compiles `cala-ledger` from source. A Node-only environment will fail with `cargo: command not found`. Install via [rustup](https://rustup.rs/) if needed.
+>
+> This requirement is a known rough edge — see [Roadmap](#roadmap) for how it will go away.
 
 ### 1. GitHub URL (recommended)
 
@@ -24,9 +29,7 @@ Pin to a commit or tag for reproducibility:
 "@vindard/cala-ledger": "github:vindard/cala-js#<sha-or-tag>"
 ```
 
-Then `yarn install` in the consumer. Yarn checks out the ref, installs the wrapper's devDeps, and runs the `prepare` script — `napi build --platform --release` — which compiles the native addon on the consumer's machine.
-
-The consumer therefore needs a working Rust toolchain (rustc, cargo) on `PATH` at install time. The resulting `.node` is built for the consumer's own triple, so cross-machine OS/arch mismatches are no longer an issue.
+Then `yarn install` in the consumer. Yarn checks out the ref, installs the wrapper's devDeps, and runs the `prepare` script — `napi build --platform --release` — which compiles the native addon on the consumer's machine. The resulting `.node` is built for the consumer's own triple, so cross-machine OS/arch mismatches are not an issue.
 
 ### 2. yarn link / npm link (for active development against a sibling checkout)
 
@@ -116,3 +119,12 @@ The original Node bindings lived inside the cala monorepo at `cala-nodejs/` and 
 
 - The outbox server (`OutboxServerConfig`, `awaitOutboxServer()`) is not exposed. cala-ledger no longer ships an in-process gRPC outbox; if you need outbox events, rebuild on the new `register_outbox_listener()` API.
 - Pagination cursors are `AccountByNameCursor` (singular), matching cala-ledger's current type names.
+
+## Roadmap
+
+The current install-from-git flow forces every consumer to build from source, which is why a Rust toolchain is required. The plan is to remove that requirement by publishing prebuilt binaries:
+
+- **Tagged GitHub Releases with per-triple `.node` assets.** Each release tag attaches prebuilt binaries for the common triples (`linux-x64-gnu`, `darwin-arm64`, `darwin-x64`, `win32-x64-msvc`, etc.). Consumers install via a postinstall script that downloads the asset matching their platform — same model napi-rs uses for its own packages, but hosted on GitHub Releases instead of npm. No Rust required on the consumer.
+- **Eventually: a published npm / GitHub Packages release.** Standard `napi prepublish` flow with per-triple optional dependencies. Consumers do a normal `yarn add @vindard/cala-ledger` and get a prebuilt `.node` resolved by their platform's optional dep.
+
+Until then, building from source on install is the supported flow.
