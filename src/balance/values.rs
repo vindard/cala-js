@@ -1,6 +1,17 @@
 use cala_ledger::primitives::DebitOrCredit;
 
 #[napi(object)]
+pub struct JournalTotalsValues {
+  pub journal_id: String,
+  pub currency: String,
+  /// Gross DR-side total across the requested accounts (sum of each
+  /// account's SETTLED `dr_balance`). For a balanced journal in steady
+  /// state this equals `cr`.
+  pub dr: String,
+  pub cr: String,
+}
+
+#[napi(object)]
 pub struct AccountBalanceValues {
   pub journal_id: String,
   pub account_id: String,
