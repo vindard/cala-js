@@ -122,7 +122,3 @@ The original Node bindings lived inside the cala monorepo at `cala-nodejs/` and 
 
 - The outbox server (`OutboxServerConfig`, `awaitOutboxServer()`) is not exposed. cala-ledger no longer ships an in-process gRPC outbox; if you need outbox events, rebuild on the new `register_outbox_listener()` API.
 - Pagination cursors are `AccountByNameCursor` (singular), matching cala-ledger's current type names.
-
-## License
-
-MIT

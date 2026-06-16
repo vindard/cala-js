@@ -2,7 +2,6 @@
 edition = "2021"
 name = "cala-ledger-node"
 version = "0.15.11"
-license = "MIT"
 
 [lib]
 crate-type = ["cdylib"]
